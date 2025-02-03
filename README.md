@@ -1,0 +1,1 @@
+# Integrated-Crop-and-Fertilizer-Recommendation-System-with-Disease-Detection
