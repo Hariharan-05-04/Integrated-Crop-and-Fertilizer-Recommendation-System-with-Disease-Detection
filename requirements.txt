@@ -4,4 +4,4 @@ joblib
 tensorflow-cpu
 pandas
 Pillow
-scikit-learn=1.4.2
+scikit-learn==1.4.2
