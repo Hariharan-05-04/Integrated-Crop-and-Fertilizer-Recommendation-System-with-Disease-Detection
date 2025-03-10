@@ -193,4 +193,5 @@ def predict_disease():
     return render_template('predict3.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv("PORT", 10000))  # Get the PORT from Render, default to 10000
+    app.run(host="0.0.0.0", port=port, debug=True)
