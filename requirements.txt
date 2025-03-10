@@ -4,3 +4,4 @@ joblib
 tensorflow-cpu
 pandas
 Pillow
+sklearn
