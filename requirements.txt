@@ -1,6 +1,6 @@
 numpy
 flask
 joblib
-tensorflow
+tensorflow-cpu
 pandas
 Pillow
