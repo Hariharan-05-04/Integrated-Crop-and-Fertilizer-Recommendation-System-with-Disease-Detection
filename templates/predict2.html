@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predict Fertilizer</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #a8e6cf, #dcedc1);
+            min-height: 100vh;
+            animation: gradient 15s ease infinite;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .form-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .input-group {
+            transition: all 0.3s ease;
+        }
+
+        .input-group:hover {
+            transform: translateX(5px);
+        }
+
+        .custom-input {
+            transition: all 0.3s ease;
+        }
+
+        .custom-input:focus {
+            border-color: #4ade80;
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.2);
+        }
+
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-5px);
+        }
+
+        .prediction-card {
+            background: linear-gradient(145deg, #ecfdf5, #d1fae5);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                box-shadow: 0 0 10px #4ade80;
+            }
+            to {
+                box-shadow: 0 0 20px #4ade80;
+            }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="form-container rounded-2xl p-6 md:p-8 mb-8">
+            <h1 class="text-4xl font-bold text-green-800 mb-8 text-center">
+                🌿 Fertilizer Recommendation System
+            </h1>
+
+            <form method="POST" action="{{ url_for('predict_fertilizer_route') }}" class="space-y-8">
+                <!-- Environmental Conditions -->
+                <div class="card-hover bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl mb-6">
+                    <h2 class="text-xl font-bold text-green-800 mb-4">🌡️ Environmental Conditions</h2>
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-green-700 mb-2" for="temperature">Temperature</label>
+                            <input type="number" step="0.01" name="Temparature" id="temperature" required
+                                   class="custom-input w-full px-4 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white">
+                        </div>
+
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-green-700 mb-2" for="humidity">Humidity</label>
+                            <input type="number" step="0.01" name="Humidity" id="humidity" required
+                                   class="custom-input w-full px-4 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white">
+                        </div>
+
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-green-700 mb-2" for="moisture">Moisture</label>
+                            <input type="number" step="0.01" name="Moisture" id="moisture" required
+                                   class="custom-input w-full px-4 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Soil and Crop Selection -->
+                <div class="card-hover bg-gradient-to-r from-blue-50 to-cyan-50 p-6 rounded-xl mb-6">
+                    <h2 class="text-xl font-bold text-cyan-800 mb-4">🌱 Soil & Crop Details</h2>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-cyan-700 mb-2" for="soil_type">Soil Type</label>
+                            <select name="Soil_Type" id="soil_type" required
+                                    class="custom-input w-full px-4 py-2 border border-cyan-200 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white">
+                                {% for soil in soil_types %}
+                                    <option value="{{ soil }}">{{ soil }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-cyan-700 mb-2" for="crop_type">Crop Type</label>
+                            <select name="Crop_Type" id="crop_type" required
+                                    class="custom-input w-full px-4 py-2 border border-cyan-200 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white">
+                                {% for crop in crop_types %}
+                                    <option value="{{ crop }}">{{ crop }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nutrient Levels -->
+                <div class="card-hover bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl mb-6">
+                    <h2 class="text-xl font-bold text-purple-800 mb-4">⚗️ Nutrient Levels</h2>
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-purple-700 mb-2" for="nitrogen">Nitrogen</label>
+                            <input type="number" name="Nitrogen" id="nitrogen" required
+                                   class="custom-input w-full px-4 py-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white">
+                        </div>
+
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-purple-700 mb-2" for="potassium">Potassium</label>
+                            <input type="number" name="Potassium" id="potassium" required
+                                   class="custom-input w-full px-4 py-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white">
+                        </div>
+
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-purple-700 mb-2" for="phosphorous">Phosphorous</label>
+                            <input type="number" name="Phosphorous" id="phosphorous" required
+                                   class="custom-input w-full px-4 py-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 px-6 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition duration-300 ease-in-out transform hover:-translate-y-1">
+                    🔍 Get Fertilizer Recommendation
+                </button>
+            </form>
+        </div>
+
+       {% if prediction %}
+<div class="prediction-card p-8 rounded-xl text-center mb-8">
+    <h2 class="text-2xl font-bold text-green-800 mb-2">Recommended Fertilizer</h2>
+    <p class="text-3xl font-bold text-green-600">{{ prediction }}</p>
+
+    <h3 class="text-xl font-bold text-green-800 mt-6">Your Input Data</h3>
+    <div class="text-left inline-block p-4 bg-white rounded-lg shadow-md">
+        <p><strong>Temperature:</strong> {{ request.form['Temparature'] }}</p>
+        <p><strong>Humidity:</strong> {{ request.form['Humidity'] }}</p>
+        <p><strong>Moisture:</strong> {{ request.form['Moisture'] }}</p>
+        <p><strong>Soil Type:</strong> {{ request.form['Soil_Type'] }}</p>
+        <p><strong>Crop Type:</strong> {{ request.form['Crop_Type'] }}</p>
+        <p><strong>Nitrogen:</strong> {{ request.form['Nitrogen'] }}</p>
+        <p><strong>Potassium:</strong> {{ request.form['Potassium'] }}</p>
+        <p><strong>Phosphorous:</strong> {{ request.form['Phosphorous'] }}</p>
+    </div>
+</div>
+{% endif %}
+
+
+        <div class="text-center">
+            <a href="/"
+               class="inline-block px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg hover:from-green-700 hover:to-green-800 transition duration-300 ease-in-out transform hover:-translate-y-1">
+                ← Back to Home
+            </a>
+        </div>
+    </div>
+</body>
+</html>

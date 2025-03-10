@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Disease Detection</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #d4fc79, #96e6a1);
+            min-height: 100vh;
+            animation: gradient 15s ease infinite;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .glass-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        }
+
+        .upload-zone {
+            border: 2px dashed #4ade80;
+            transition: all 0.3s ease;
+        }
+
+        .upload-zone:hover {
+            border-color: #22c55e;
+            transform: translateY(-2px);
+        }
+
+        .preview-image {
+            transition: transform 0.3s ease;
+        }
+
+        .preview-image:hover {
+            transform: scale(1.02);
+        }
+
+        .prediction-card {
+            background: linear-gradient(145deg, #ecfdf5, #d1fae5);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                box-shadow: 0 0 10px #4ade80;
+            }
+            to {
+                box-shadow: 0 0 20px #4ade80;
+            }
+        }
+
+        .custom-file-label {
+            background: linear-gradient(to right, #4ade80, #22c55e);
+            transition: all 0.3s ease;
+        }
+
+        .custom-file-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
+        }
+
+        .loading-animation {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="glass-container rounded-2xl p-6 md:p-8 mb-8">
+            <h1 class="text-4xl font-bold text-green-800 text-center mb-8">
+                🌿 Plant Disease Detection
+            </h1>
+
+            <div class="upload-zone rounded-xl p-8 text-center mb-8">
+                <form action="/predict_disease" method="POST" enctype="multipart/form-data">
+                    <div class="flex flex-col items-center mb-6">
+                        <div class="relative">
+                            <label for="file-upload" class="custom-file-label cursor-pointer px-6 py-4 rounded-xl text-white font-semibold hover:shadow-lg block">
+                                📸 Choose Image
+                            </label>
+                            <input id="file-upload" type="file" name="image" accept="image/*" required
+                                   style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer;">
+                        </div>
+                        <p id="file-name" class="text-gray-600 mt-2">No file selected</p>
+                    </div>
+
+                    <button type="submit"
+                            class="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 px-8 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition duration-300 ease-in-out transform hover:-translate-y-1">
+                        🔍 Analyze Plant
+                    </button>
+                </form>
+            </div>
+
+            {% if error %}
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg mb-6">
+                <p class="font-medium">{{ error }}</p>
+            </div>
+            {% endif %}
+
+            {% if image_path %}
+            <div class="preview-container bg-gray-50 rounded-xl p-6 mb-8">
+                <h3 class="text-xl font-semibold text-green-800 mb-4">Uploaded Image</h3>
+                <div class="relative overflow-hidden rounded-xl shadow-lg">
+                    <img src="{{ image_path }}"
+                         class="preview-image w-full max-h-[400px] object-contain"
+                         alt="Uploaded plant image">
+                </div>
+            </div>
+            {% endif %}
+
+            {% if prediction %}
+            <div class="prediction-card rounded-xl p-8 text-center mb-8">
+                <h2 class="text-2xl font-bold text-green-800 mb-4">Analysis Result</h2>
+                <div class="bg-white rounded-lg p-4 shadow-inner">
+                    <p class="text-xl text-green-600 font-semibold">{{ prediction }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="text-center">
+                <a href="/"
+                   class="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 transition duration-300 ease-in-out transform hover:-translate-y-1">
+                    ← Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Store the uploaded image in localStorage to persist across form submissions
+        let uploadedImageDataUrl = '';
+
+        // Add filename display after selection
+        document.getElementById('file-upload').addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name;
+            if (fileName) {
+                document.getElementById('file-name').textContent = '📄 ' + fileName;
+            } else {
+                document.getElementById('file-name').textContent = 'No file selected';
+            }
+        });
+
+        // Display image preview immediately after selection
+        document.getElementById('file-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+
+                reader.onload = function(event) {
+                    // Save the image data URL
+                    uploadedImageDataUrl = event.target.result;
+                    localStorage.setItem('lastUploadedImage', uploadedImageDataUrl);
+
+                    // Create or update preview container
+                    displayImagePreview(uploadedImageDataUrl);
+                };
+
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Function to display image preview
+        function displayImagePreview(imageUrl) {
+            let previewContainer = document.querySelector('.preview-container');
+
+            if (!previewContainer) {
+                previewContainer = document.createElement('div');
+                previewContainer.className = 'preview-container bg-gray-50 rounded-xl p-6 mb-8';
+                previewContainer.innerHTML = `
+                    <h3 class="text-xl font-semibold text-green-800 mb-4">Plant Image</h3>
+                    <div class="relative overflow-hidden rounded-xl shadow-lg">
+                        <img class="preview-image w-full max-h-[400px] object-contain" alt="Plant image">
+                    </div>
+                `;
+
+                // Insert after the upload zone
+                const uploadZone = document.querySelector('.upload-zone');
+                uploadZone.parentNode.insertBefore(previewContainer, uploadZone.nextSibling);
+            }
+
+            // Update the image source
+            const previewImage = previewContainer.querySelector('img');
+            previewImage.src = imageUrl;
+            previewContainer.style.display = 'block';
+        }
+
+        // On page load, check if we have a stored image and display it
+        document.addEventListener('DOMContentLoaded', function() {
+            const storedImage = localStorage.getItem('lastUploadedImage');
+            if (storedImage) {
+                displayImagePreview(storedImage);
+            }
+
+            // If the server returned an image path, use that instead
+            {% if image_path %}
+                // Here we preserve the server-returned image as a fallback
+                // We still prioritize our local storage version if we have it
+                if (!storedImage) {
+                    const serverImagePath = "{{ image_path }}";
+                    if (serverImagePath) {
+                        displayImagePreview(serverImagePath);
+                    }
+                }
+            {% endif %}
+        });
+
+        // Attach form submission handler to preserve the image display
+        document.querySelector('form').addEventListener('submit', function(e) {
+            // We don't prevent default as we want the form to submit
+            // But we'll ensure the image persists even if page refreshes
+            localStorage.setItem('lastUploadedImage', uploadedImageDataUrl);
+        });
+    </script>
+</body>
+</html>
