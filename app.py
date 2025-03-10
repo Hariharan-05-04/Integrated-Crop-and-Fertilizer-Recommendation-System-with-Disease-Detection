@@ -6,7 +6,7 @@ import joblib
 import tensorflow as tf
 from PIL import Image
 import os
-
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1" 
 app = Flask(__name__)
 
 # Configure upload folder
