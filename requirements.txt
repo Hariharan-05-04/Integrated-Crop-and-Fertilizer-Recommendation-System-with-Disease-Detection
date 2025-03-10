@@ -1,0 +1,5 @@
+pickle
+numpy
+flask
+joblib
+tensorflow
