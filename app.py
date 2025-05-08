@@ -1,12 +1,12 @@
-from flask import Flask, render_template, request, jsonify
+import os
 import pickle
+
+import joblib
 import numpy as np
 import pandas as pd
-import joblib
 import tensorflow as tf
-from PIL import Image
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1" 
+from flask import Flask, render_template, request, jsonify
+
 app = Flask(__name__)
 
 # Configure upload folder
@@ -38,19 +38,19 @@ soil_types = fertilizer_label_encoders['Soil_Type'].classes_.tolist()
 crop_types = fertilizer_label_encoders['Crop_Type'].classes_.tolist()
 
 # Disease class names
-class_names = ['Apple___Apple_scab', 'Apple___Black_rot', 'Apple___Cedar_apple_rust', 'Apple___healthy',
-               'Blueberry___healthy', 'Cherry_(including_sour)___Powdery_mildew',
-               'Cherry_(including_sour)___healthy', 'Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot',
-               'Corn_(maize)___Common_rust_', 'Corn_(maize)___Northern_Leaf_Blight', 'Corn_(maize)___healthy',
-               'Grape___Black_rot', 'Grape___Esca_(Black_Measles)', 'Grape___Leaf_blight_(Isariopsis_Leaf_Spot)',
-               'Grape___healthy', 'Orange___Haunglongbing_(Citrus_greening)', 'Peach___Bacterial_spot',
-               'Peach___healthy', 'Pepper,_bell___Bacterial_spot', 'Pepper,_bell___healthy',
-               'Potato___Early_blight', 'Potato___Late_blight', 'Potato___healthy',
-               'Raspberry___healthy', 'Soybean___healthy', 'Squash___Powdery_mildew',
-               'Strawberry___Leaf_scorch', 'Strawberry___healthy', 'Tomato___Bacterial_spot',
-               'Tomato___Early_blight', 'Tomato___Late_blight', 'Tomato___Leaf_Mold',
-               'Tomato___Septoria_leaf_spot', 'Tomato___Spider_mites Two-spotted_spider_mite',
-               'Tomato___Target_Spot', 'Tomato___Tomato_Yellow_Leaf_Curl_Virus', 'Tomato___Tomato_mosaic_virus',
+class_names = ['Apple__Apple_scab', 'Apple_Black_rot', 'Apple_Cedar_apple_rust', 'Apple__healthy',
+               'Blueberry__healthy', 'Cherry(including_sour)_Powdery_mildew',
+               'Cherry_(including_sour)healthy', 'Corn(maize)_Cercospora_leaf_spot Gray_leaf_spot',
+               'Corn_(maize)Common_rust', 'Corn_(maize)Northern_Leaf_Blight', 'Corn(maize)_healthy',
+               'Grape__Black_rot', 'Grape_Esca(Black_Measles)', 'Grape__Leaf_blight(Isariopsis_Leaf_Spot)',
+               'Grape__healthy', 'Orange_Haunglongbing(Citrus_greening)', 'Peach___Bacterial_spot',
+               'Peach__healthy', 'Pepper,_bell_Bacterial_spot', 'Pepper,_bell__healthy',
+               'Potato__Early_blight', 'Potato_Late_blight', 'Potato__healthy',
+               'Raspberry__healthy', 'Soybean_healthy', 'Squash__Powdery_mildew',
+               'Strawberry__Leaf_scorch', 'Strawberry_healthy', 'Tomato__Bacterial_spot',
+               'Tomato__Early_blight', 'Tomato_Late_blight', 'Tomato__Leaf_Mold',
+               'Tomato__Septoria_leaf_spot', 'Tomato__Spider_mites Two-spotted_spider_mite',
+               'Tomato__Target_Spot', 'Tomato_Tomato_Yellow_Leaf_Curl_Virus', 'Tomato__Tomato_mosaic_virus',
                'Tomato___healthy']
 
 
@@ -139,59 +139,32 @@ def predict_fertilizer_route():
 @app.route('/predict_disease', methods=['GET', 'POST'])
 def predict_disease():
     if request.method == 'POST':
-        # Add debugging
-        print("POST request received for predict_disease")
-        print(f"Files in request: {request.files}")
-
         if 'image' not in request.files:
-            print("No image file in request.files")
             return render_template('predict3.html', error='No file uploaded')
 
         file = request.files['image']
-        print(f"File received: {file.filename}")
-
         if file.filename == '':
-            print("Empty filename")
             return render_template('predict3.html', error='No file selected')
 
         if file:
+            # Save the uploaded file
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+            file.save(filepath)
+
+            # Make prediction
             try:
-                # Make sure upload directory exists
-                if not os.path.exists(app.config['UPLOAD_FOLDER']):
-                    print(f"Creating directory: {app.config['UPLOAD_FOLDER']}")
-                    os.makedirs(app.config['UPLOAD_FOLDER'])
+                result_index = model_prediction(filepath)
+                prediction = class_names[result_index]
 
-                # Save the uploaded file
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-                print(f"Saving file to: {filepath}")
-                file.save(filepath)
-
-                # Verify file was saved
-                if os.path.exists(filepath):
-                    print(f"File saved successfully at {filepath}")
-                else:
-                    print(f"File save failed, not found at {filepath}")
-                    return render_template('predict3.html', error='Failed to save file')
-
-                # Make prediction
-                try:
-                    result_index = model_prediction(filepath)
-                    prediction = class_names[result_index]
-                    print(f"Prediction successful: {prediction}")
-
-                    # Pass both the prediction and the image path to the template
-                    return render_template('predict3.html',
-                                           prediction=prediction,
-                                           image_path=os.path.join('uploads', file.filename))
-                except Exception as e:
-                    print(f"Prediction error: {str(e)}")
-                    return render_template('predict3.html', error=f"Prediction error: {str(e)}")
+                # Pass both the prediction and the image path to the template
+                return render_template('predict3.html',
+                                       prediction=prediction,
+                                       image_path=os.path.join('uploads', file.filename))
             except Exception as e:
-                print(f"File handling error: {str(e)}")
-                return render_template('predict3.html', error=f"File upload error: {str(e)}")
+                return render_template('predict3.html', error=str(e))
 
     return render_template('predict3.html')
 
+
 if __name__ == '__main__':
-    port = int(os.getenv("PORT", 10000))  # Get the PORT from Render, default to 10000
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(debug=True)
